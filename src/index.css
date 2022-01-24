@@ -1,0 +1,65 @@
+/* ./src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import 'antd/dist/antd.min.css';
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  direction: rtl;
+  /* overflow: hidden; */
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+
+/* for addShop component */
+.ant-col-8 {
+  display: block;
+  flex: 0 0 18.33333333%;
+  max-width: 33.33333333%;
+}
+
+/* for addShop component */
+.ant-col-16 {
+  display: block;
+  flex: 0 0 66.66666667%;
+  max-width: 100%;
+}
+
+/* for addManagerUser component */
+.ant-col-14 {
+  display: block;
+  flex: 0 0 66.66666667%;
+  max-width: 100%;
+}
+
+
+/* for profile component */
+.ant-image-preview-img {
+  display: unset;
+}
+
+
+/* for categories component , Popconfirm */
+.ant-popover-inner {
+  background-color: rgb(203 213 225);
+  padding-left: 5px;
+  border-radius: 5px;
+}
+
+
+/* for manageProducts tbl */
+.editable-row .ant-form-item-explain {
+  position: absolute;
+  top: 100%;
+  font-size: 12px;
+}
