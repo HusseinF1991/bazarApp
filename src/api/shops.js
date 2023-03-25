@@ -1,4 +1,5 @@
-import {url} from "./baseUrl";
+import { url } from "./baseUrl";
+import { resources } from "../resource";
 
 export async function getAllShops() {
   let output = await fetch(`${url}/getAllShops`, {
@@ -9,9 +10,12 @@ export async function getAllShops() {
     },
     // body: JSON.stringify(data) // body data type must match "Content-Type" header
   })
-  .then((response) => {
-      return response.json()
-  });
+    .then((response) => {
+      return response.json();
+    })
+    .catch((err) => {
+      return resources.FAILED_TO_FETCH;
+    });
   return output;
 }
 
@@ -22,11 +26,14 @@ export async function getOneShopDetails(myReqBody) {
       "Content-Type": "application/json",
       // 'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: myReqBody // body data type must match "Content-Type" header
+    body: myReqBody, // body data type must match "Content-Type" header
   })
-  .then((response) => {
-      return response.json()
-  });
+    .then((response) => {
+      return response.json();
+    })
+    .catch((err) => {
+      return resources.FAILED_TO_FETCH;
+    });
   return output;
 }
 
@@ -37,10 +44,31 @@ export async function addNewShop(myReqBody) {
     //   "Content-Type": "application/json",
     //   // 'Content-Type': 'application/x-www-form-urlencoded',
     // },
-     body: myReqBody, // body data type must match "Content-Type" header
+    body: myReqBody, // body data type must match "Content-Type" header
   })
-  .then((response) => {
-      return response.json()
-  });
+    .then((response) => {
+      return response.json();
+    })
+    .catch((err) => {
+      return resources.FAILED_TO_FETCH;
+    });
+  return output;
+}
+
+export async function editShopInfo(myReqBody) {
+  let output = await fetch(`${url}/editShopInfo`, {
+    method: "POST", // *GET, POST, PUT, DELETE, etc.
+    // headers: {
+    // "Content-Type": "application/json",
+    //   // 'Content-Type': 'application/x-www-form-urlencoded',
+    // },
+    body: myReqBody, // body data type must match "Content-Type" header
+  })
+    .then((response) => {
+      return response.json();
+    })
+    .catch((err) => {
+      return resources.FAILED_TO_FETCH;
+    });
   return output;
 }

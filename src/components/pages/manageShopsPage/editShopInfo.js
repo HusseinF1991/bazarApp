@@ -1,92 +1,67 @@
 import { Button, Form, Input, message } from "antd";
 import { useState } from "react";
 import { LoadingOutlined, PlusOutlined } from "@ant-design/icons";
-// import { classes } from "./addShop.module.css";
-import { addNewShop } from "../../../api/shops";
-import ErrorInFetch from "../../layout/errorInFetch";
+import { editShopInfo } from "../../../api/shops";
+import { useEffect } from "react/cjs/react.development";
+import { shopImgUrl } from "../../../api/baseUrl";
 import { resources } from "../../../resource";
+import ErrorInFetch from "../../layout/errorInFetch";
 
-function AddShop(props) {
+function EditShopInfo(props) {
   const [loadingImg, setLoadingImg] = useState(false);
-  const [logo, setLogo] = useState({ preview: "", data: "" });
+  const [logo, setLogo] = useState("");
   const layout = {
     labelCol: { span: 8 },
     wrapperCol: { span: 16 },
   };
 
+  useEffect(() => {
+    setLogo(props.shopData.logo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function onFinish(values){
     let formData = new FormData();
-    formData.append("logo", logo.data);
+    if (logo.data !== undefined) {
+      formData.append("newLogo", logo.data);
+      formData.append("oldLogo", props.shopData.logo);
+    }
+    formData.append("id", props.shopData.id);
     formData.append("name", values.user.name.trim());
     formData.append("location", values.user.location.trim());
     formData.append("specialty", values.user.specialty.trim());
     formData.append("email", values.user.email);
     formData.append("mobile", values.user.mobile);
     formData.append("profitRate", values.user.profitRate);
-    formData.append("username", values.user.username.trim());
-    formData.append("password", values.user.password.trim());
-    let output = addNewShop(formData);
+
+    
+    let output = editShopInfo(formData);
     output.then((result) => {
       if (result === resources.FAILED_TO_FETCH) {
-        ErrorInFetch(() => onFinish(values));
+        ErrorInFetch(() =>  onFinish(values));
       } else {
-        if (result.err !== null && result.err === "usernameDuplicated") {
-          message.error("اسم المستخدم موجود مسبقا");
-        } else if (result.err !== null && result.err === "shopNameDuplicated") {
+        if (result.err !== null && result.err === "shopNameDuplicated") {
           message.error("اسم المحل موجود مسبقا");
         } else if (
           result.data !== null &&
           result.data === "successfullyAdded"
         ) {
-          message.success("تم اضافة محل جديد بنجاح");
+          message.success("تم تعديل المعلومات");
           props.setTblHasData(!props.tblHasData);
-          props.ShowAddNewShopHandler();
+          props.onEditShopInfoClickHandler();
         }
       }
     });
   };
 
   function handleLogoInputChange(event) {
-    const img = {
+    let img = {
       preview: URL.createObjectURL(event.target.files[0]),
       data: event.target.files[0],
     };
     setLogo(img);
     setLoadingImg(false);
   }
-
-  /// depricated
-  // function beforeUpload(file) {
-  //   const isJpgOrPng = file.type === "image/jpeg" || file.type === "image/png";
-  //   if (!isJpgOrPng) {
-  //     message.error("You can only upload JPG/PNG file!");
-  //   }
-  //   const isLt2M = file.size / 1024 / 1024 < 2;
-  //   if (!isLt2M) {
-  //     message.error("Image must smaller than 2MB!");
-  //   }
-  //   return isJpgOrPng && isLt2M;
-  // }
-
-  // function getBase64(img, callback) {
-  //   const reader = new FileReader();
-  //   reader.addEventListener("load", () => callback(reader.result));
-  //   reader.readAsDataURL(img);
-  // }
-
-  // const handleChange = (info) => {
-  //   if (info.file.status === "uploading") {
-  //     setLoadingImg(true);
-  //     return;
-  //   }
-  //   if (info.file.status === "done") {
-  //     // Get this url from response in real world.
-  //     getBase64(info.file.originFileObj, (imageUrl) => {
-  //       // setImageUrl(imageUrl);
-  //       setLoadingImg(false);
-  //     });
-  //   }
-  // };
 
   const uploadButton = (
     <div>
@@ -104,17 +79,13 @@ function AddShop(props) {
       className="absolute inset-0 w-full h-full z-10"
       style={{ backgroundColor: "rgba(100, 116, 139, 0.85)" }}
     >
-      <div className="m-auto w-6/12 bg-slate-800 mt-4 p-4">
-        <Form
-          {...layout}
-          name="nest-messages"
-          onFinish={onFinish}
-          // validateMessages={validateMessages}
-        >
+      <div className="m-auto w-6/12 bg-slate-800 mt-8 p-4">
+        <Form {...layout} name="nest-messages" onFinish={onFinish}>
           <Form.Item
             label={<label style={{ color: "white" }}>اسم المحل</label>}
             name={["user", "name"]}
             rules={[{ required: true, message: "املأ الحقل رجاءا" }]}
+            initialValue={props.shopData.name}
           >
             <Input />
           </Form.Item>
@@ -122,6 +93,7 @@ function AddShop(props) {
             name={["user", "specialty"]}
             label={<label style={{ color: "white" }}>التخصص</label>}
             rules={[{ required: true, message: "املأ الحقل رجاءا" }]}
+            initialValue={props.shopData.specialty}
           >
             <Input />
           </Form.Item>
@@ -129,6 +101,7 @@ function AddShop(props) {
             name={["user", "email"]}
             label={<label style={{ color: "white" }}>ايميل</label>}
             rules={[{ type: "email", min: 0, max: 99 }]}
+            initialValue={props.shopData.email}
           >
             <Input />
           </Form.Item>
@@ -136,6 +109,7 @@ function AddShop(props) {
             name={["user", "mobile"]}
             label={<label style={{ color: "white" }}>رقم الهاتف</label>}
             rules={[{ type: "number", len: 11 }]}
+            initialValue={props.shopData.mobile}
           >
             <Input />
           </Form.Item>
@@ -143,28 +117,16 @@ function AddShop(props) {
             name={["user", "location"]}
             label={<label style={{ color: "white" }}>الموقع</label>}
             rules={[{ required: true, message: "املأ الحقل رجاءا" }]}
+            initialValue={props.shopData.location}
           >
             <Input />
           </Form.Item>
           <Form.Item
             name={["user", "profitRate"]}
             label={<label style={{ color: "white" }}>نسبة الربح</label>}
+            initialValue={props.shopData.profitRate}
           >
             <Input />
-          </Form.Item>
-          <Form.Item
-            name={["user", "username"]}
-            label={<label style={{ color: "white" }}>اسم المستخدم</label>}
-            rules={[{ required: true, message: "املأ الحقل رجاءا" }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name={["user", "password"]}
-            label={<label style={{ color: "white" }}>الرمز السري</label>}
-            rules={[{ required: true, message: "املأ الحقل رجاءا" }]}
-          >
-            <Input type="password" />
           </Form.Item>
           <Form.Item
             name={["user", "logo"]}
@@ -180,9 +142,13 @@ function AddShop(props) {
               onClick={() => document.getElementById("shopLogoInput").click()}
               className="h-24 w-24 p-0"
             >
-              {logo.preview ? (
+              {logo !== "" ? (
                 <img
-                  src={logo.preview}
+                  src={
+                    logo.preview === undefined
+                      ? `${shopImgUrl}${logo}`
+                      : logo.preview
+                  }
                   alt="avatar"
                   style={{ width: "100%" }}
                 />
@@ -199,7 +165,7 @@ function AddShop(props) {
               type="primary"
               htmlType="submit"
               style={{ margin: "0 8px" }}
-              onClick={() => props.ShowAddNewShopHandler()}
+              onClick={() => props.onEditShopInfoClickHandler()}
             >
               الغاء
             </Button>
@@ -210,4 +176,4 @@ function AddShop(props) {
   );
 }
 
-export default AddShop;
+export default EditShopInfo;

@@ -1,11 +1,11 @@
 import { url } from "./baseUrl";
 import { resources } from "../resource";
 
-export async function getCategories() {
-  let output = await fetch(`${url}/getCategories`, {
-    method: "GET",
+export async function deleteOneReview(myReqBody) {
+  let output = await fetch(`${url}/deleteOneReview`, {
+    method: "DELETE",
     headers: { "Content-Type": "application/json" },
-    // body: myReqBody,
+    body: myReqBody,
   })
     .then((data) => {
       return data.json();
@@ -16,8 +16,8 @@ export async function getCategories() {
   return output;
 }
 
-export async function addNewCategory(myReqBody) {
-  let output = await fetch(`${url}/addNewCategory`, {
+export async function addNewReview(myReqBody) {
+  let output = await fetch(`${url}/addNewReview`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: myReqBody,
@@ -31,11 +31,11 @@ export async function addNewCategory(myReqBody) {
   return output;
 }
 
-export async function deleteCategory(myReqBody) {
-  let output = await fetch(`${url}/deleteCategory`, {
-    method: "DELETE",
+export async function setItemReviewsAsRead(itemId) {
+  let output = await fetch(`${url}/setItemReviewsAsRead?itemId=${itemId}`, {
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: myReqBody,
+    // body: myReqBody,
   })
     .then((data) => {
       return data.json();

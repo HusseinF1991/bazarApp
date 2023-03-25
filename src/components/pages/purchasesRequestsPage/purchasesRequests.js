@@ -1,22 +1,22 @@
 import {
-  Button,
-  Dropdown,
-  Input,
-  Menu,
-  Space,
   Table,
   Tag,
+  Space,
+  Dropdown,
+  Button,
+  Menu,
+  Input,
   Typography,
 } from "antd";
-import { useEffect, useState } from "react";
-import Highlighter from "react-highlight-words";
-import { getSellsArchive } from "../../../api/invoices";
-import { ManagerAccountInfo } from "../../../store/managerAccountInfo";
-import InvoiceChat from "../purchasesRequestsPage/invoiceChat";
-import PurchaseReqDetails from "../purchasesRequestsPage/purchaseReqDetails";
 import { DownOutlined, SearchOutlined } from "@ant-design/icons";
-import { resources } from "../../../resource";
+import Highlighter from "react-highlight-words";
+import { useEffect, useState } from "react";
+import { ManagerAccountInfo } from "../../../store/managerAccountInfo";
+import { getPurchasesRequests } from "../../../api/invoices";
+import PurchaseReqDetails from "./purchaseReqDetails";
+import InvoiceChat from "./invoiceChat";
 import ErrorInFetch from "../../layout/errorInFetch";
+import { resources } from "../../../resource";
 import { MainMenuSelection } from "../../../store/mainMenuSelection";
 
 let searchInput;
@@ -25,23 +25,24 @@ let selectedInvoiceChat = {
   customerName: "",
   invoiceShopId: "",
 };
-function SellsArchive() {
-  const [sellsArchiveData, setSellsArchiveData] = useState([]);
-  const [loadSellsArchive, setLoadSellsArchive] = useState(true);
-  const [displayInvoiceDetails, setDisplayInvoiceDetails] = useState(false);
-  const [displayInvoiceChat, setDisplayInvoiceChat] = useState(false);
+function PurchasesRequests() {
   const { accountInfo } = ManagerAccountInfo();
+  const [displayInvoiceChat, setDisplayInvoiceChat] = useState(false);
   const [mySearchState, setMySearchState] = useState({
     searchText: "",
     searchedColumn: "",
   });
+  const [purchasesReqs, setPurchasesReqs] = useState([]);
+  const [loadPurchasesReqs, setLoadPurchasesReqs] = useState(true);
+  const [displayPurchaseReqDetails, setDisplayPurchaseReqDetails] =
+    useState(false);
   const { setSelectedItemInfo } = MainMenuSelection();
 
   //useEffect for setting selected main menu item
   useEffect(() => {
     setSelectedItemInfo({
-      key: resources.MAIN_MENU_ITEMS.SELLS_ARCHIVE.KEY,
-      title: resources.MAIN_MENU_ITEMS.SELLS_ARCHIVE.TITLE,
+      key: resources.MAIN_MENU_ITEMS.PURCHASES_REQUESTS.KEY,
+      title: resources.MAIN_MENU_ITEMS.PURCHASES_REQUESTS.TITLE,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -51,10 +52,10 @@ function SellsArchive() {
       pageNum: 1,
       shopId: accountInfo.shopId,
     };
-    let output = getSellsArchive(JSON.stringify(myReqBody));
+    let output = getPurchasesRequests(JSON.stringify(myReqBody));
     output.then((res) => {
       if (res === resources.FAILED_TO_FETCH) {
-        ErrorInFetch(() => setLoadSellsArchive(!loadSellsArchive));
+        ErrorInFetch(() => setLoadPurchasesReqs(!loadPurchasesReqs));
       } else {
         let data = [];
         res.docs.forEach((element) => {
@@ -72,11 +73,11 @@ function SellsArchive() {
           };
           data.push(newElement);
         });
-        setSellsArchiveData(data);
-        setLoadSellsArchive(false);
+        setPurchasesReqs(data);
+        setLoadPurchasesReqs(false);
       }
     });
-  }, [accountInfo.shopId, loadSellsArchive]);
+  }, [accountInfo.shopId, loadPurchasesReqs]);
 
   const getColumnSearchProps = (colTitle, dataIndex) => ({
     filterDropdown: ({
@@ -244,17 +245,10 @@ function SellsArchive() {
       render: (_, record) => {
         return (
           <Space>
-            {record.status === resources.INVOICE_STATUS.PENDING && (
+            {record.status === "pending" ? (
               <Tag color={"red"}>{`قيد الانتظار`}</Tag>
-            )}
-            {record.status === resources.INVOICE_STATUS.APPROVED && (
+            ) : (
               <Tag color={"green"}>{`تم الموافقة عليه`}</Tag>
-            )}
-            {record.status === resources.INVOICE_STATUS.DELIVERED && (
-              <Tag color={"green"}>{`تم التوصيل`}</Tag>
-            )}
-            {record.status === resources.INVOICE_STATUS.REJECTED && (
-              <Tag color={"volcano"}>{`الطلب مرفوض`}</Tag>
             )}
           </Space>
         );
@@ -267,6 +261,10 @@ function SellsArchive() {
       align: "center",
       render: (text, record) => (
         <Space size="middle">
+          {/* <a>رفض الطلب</a>
+          <a>الموافقة على الطلب</a>
+          <a>الغاء الطلب</a>
+          <a>مراسلة المشتري</a> */}
           <Dropdown overlay={() => requestsOpMenu(record)}>
             <Button type="link" size="default">
               عرض <DownOutlined />
@@ -281,7 +279,7 @@ function SellsArchive() {
     <Menu
       onClick={(event) => onRequestsOpMenuClickHandler(requestRecord, event)}
     >
-      <Menu.Item key={1}>عرض المراسلات</Menu.Item>
+      <Menu.Item key={1}>مراسلة المشتري</Menu.Item>
       <Menu.Item key={2}>عرض التفاصيل كاملة</Menu.Item>
     </Menu>
   );
@@ -309,7 +307,7 @@ function SellsArchive() {
       pageNum: page,
       shopId: accountInfo.shopId,
     };
-    let output = getSellsArchive(JSON.stringify(myReqBody));
+    let output = getPurchasesRequests(JSON.stringify(myReqBody));
     output.then((res) => {
       if (res === resources.FAILED_TO_FETCH) {
         ErrorInFetch(() => onChangePageHandler(page, pageSize));
@@ -330,13 +328,13 @@ function SellsArchive() {
           };
           data.push(newElement);
         });
-        setSellsArchiveData(data);
+        setPurchasesReqs(data);
       }
     });
   }
 
   function OnOpenPurchaseReqClickHandler() {
-    setDisplayInvoiceDetails(!displayInvoiceDetails);
+    setDisplayPurchaseReqDetails(!displayPurchaseReqDetails);
   }
 
   function OnOpenInvoiceChatClickHandler() {
@@ -347,21 +345,20 @@ function SellsArchive() {
     <>
       <Table
         columns={columns}
-        dataSource={sellsArchiveData}
+        dataSource={purchasesReqs}
         size={"small"}
         bordered
         pagination={{
           onChange: onChangePageHandler,
         }}
-        scroll={{ y: 400 }}
+        scroll={{ y: 380 }}
       />
-      {displayInvoiceDetails ? (
+      {displayPurchaseReqDetails ? (
         <PurchaseReqDetails
           OnOpenPurchaseReqClickHandler={OnOpenPurchaseReqClickHandler}
-          purchasesReqs={sellsArchiveData}
+          purchasesReqs={purchasesReqs}
           selectedInvoiceId={selectedInvoiceId}
-          setLoadPurchasesReqs={setLoadSellsArchive}
-          readOnlyComponent={true}
+          setLoadPurchasesReqs={setLoadPurchasesReqs}
         />
       ) : null}
       {displayInvoiceChat ? (
@@ -369,11 +366,10 @@ function SellsArchive() {
           OnOpenInvoiceChatClickHandler={OnOpenInvoiceChatClickHandler}
           customerName={selectedInvoiceChat.customerName}
           invoiceShopId={selectedInvoiceChat.invoiceShopId}
-          readOnlyComponent={true}
         />
       ) : null}
     </>
   );
 }
 
-export default SellsArchive;
+export default PurchasesRequests;

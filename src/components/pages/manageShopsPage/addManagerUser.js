@@ -1,7 +1,10 @@
 import { Button, Form, Input, message } from "antd";
 import { addNewManager } from "../../../api/managers";
+import { resources } from "../../../resource";
+import ErrorInFetch from "../../layout/errorInFetch";
 
 function AddManagerUser(props) {
+
   function onFinish(event) {
     const myReqBody = {
       username: event.username,
@@ -10,14 +13,16 @@ function AddManagerUser(props) {
     };
     let output = addNewManager(JSON.stringify(myReqBody));
     output.then((res) => {
-      console.log(res);
-      
-      if (res.err === "usernameDuplicated") {
-        message.error("اسم المستخدم موجود مسبقا");
+      if (res === resources.FAILED_TO_FETCH) {
+        ErrorInFetch(() => onFinish(event));
       } else {
-        message.success("تم اضافة مستخدم جديد");
-        props.setTblHasData(!props.tblHasData);
-        props.ShowAddNewManagerHandler();
+        if (res.err === "usernameDuplicated") {
+          message.error("اسم المستخدم موجود مسبقا");
+        } else {
+          message.success("تم اضافة مستخدم جديد");
+          props.setTblHasData(!props.tblHasData);
+          props.ShowAddNewManagerHandler();
+        }
       }
     });
   }

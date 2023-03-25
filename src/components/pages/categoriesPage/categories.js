@@ -1,31 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Button, message, Popconfirm, Space, Tooltip, Tree } from "antd";
-import {
-  CaretLeftOutlined,
-  DeleteTwoTone,
-  PlusOutlined,
-} from "@ant-design/icons";
-import { render } from "@testing-library/react";
+import { Button, message, Popconfirm, Space, Tree } from "antd";
+import { CaretLeftOutlined, DeleteTwoTone } from "@ant-design/icons";
 import { deleteCategory, getCategories } from "../../../api/categories";
 import AddCategoryModel from "./addCategoryModel";
-
-const initTreeData = [
-  //   {
-  //     title: "Expand to load",
-  //     key: "0",
-  //   },
-  //   {
-  //     title: "Expand to load",
-  //     key: "1",
-  //   },
-  {
-    title: "اضافة",
-    key: "0",
-    parentId: null,
-    level: 1,
-    isLeaf: true,
-  },
-]; // It's just a simple demo. You can use tree map to optimize update perf.
+import { resources } from "../../../resource";
+import ErrorInFetch from "../../layout/errorInFetch";
+import { MainMenuSelection } from "../../../store/mainMenuSelection";
 
 function Categories() {
   const [treeData, setTreeData] = useState([]);
@@ -34,43 +14,53 @@ function Categories() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [loadCategories, setLoadCategories] = useState(true);
   const [loadedKeys, setLoadedKeys] = useState([]);
+  const { setSelectedItemInfo } = MainMenuSelection();
+
+  //useEffect for setting selected main menu item
+  useEffect(() => {
+    setSelectedItemInfo({
+      key: resources.MAIN_MENU_ITEMS.CATEGORIES.KEY,
+      title: resources.MAIN_MENU_ITEMS.CATEGORIES.TITLE,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let output = getCategories();
     let level1CatTree = [];
     let keyCount = 0;
     output.then((res) => {
-      if (res.length > 0) {
-        res.forEach((element) => {
-          if (element.catLevel === 1) {
-            const branch = {
-              key: keyCount.toString(),
-              id: element.id,
-              title: element.catName,
-              level: element.catLevel,
-              parentId: null,
-              isLeaf: false,
-            };
-            level1CatTree.push(branch);
-            keyCount++;
-          }
+      if (res === resources.FAILED_TO_FETCH) {
+        ErrorInFetch(() => setLoadCategories(!loadCategories));
+      } else {
+        if (res.length > 0) {
+          res.forEach((element) => {
+            if (element.catLevel === 1) {
+              const branch = {
+                key: keyCount.toString(),
+                id: element.id,
+                title: element.catName,
+                level: element.catLevel,
+                parentId: null,
+                isLeaf: false,
+              };
+              level1CatTree.push(branch);
+              keyCount++;
+            }
+          });
+        }
+        level1CatTree.push({
+          title: "اضافة",
+          key: keyCount.toString(),
+          parentId: null,
+          level: 1,
+          isLeaf: true,
         });
+        setCategoriesData(res);
+        setLoadedKeys([]);
+        setTreeData(level1CatTree);
+        setLoadCategories(false);
       }
-      level1CatTree.push({
-        title: "اضافة",
-        key: keyCount.toString(),
-        parentId: null,
-        level: 1,
-        isLeaf: true,
-      });
-      console.log("level1CatTree = ", level1CatTree);
-      setCategoriesData(res);
-      setLoadedKeys([]);
-      setTreeData(level1CatTree);
-      setLoadCategories(false);
-      // setTreeData((origin) =>
-      //   updateTreeData(origin, origin[0].key, level1CatTree)
-      // );
     });
   }, [loadCategories]);
 
@@ -112,7 +102,6 @@ function Categories() {
         level: node.level + 1,
         isLeaf: true,
       });
-      console.log("treeData = ", treeData);
       setTimeout(() => {
         setTreeData((origin) =>
           updateTreeData(origin, node.key, loadedLvlCatTree)
@@ -169,24 +158,26 @@ function Categories() {
   }
 
   function onDeletingCategoryHandler(item) {
-    console.log(item);
     if (categoriesData.find((i) => i.parentCatId === item.id) !== undefined) {
       message.error("لا يمكن الحذف , هذا الصنف لديه اصناف تحته");
       return;
     }
     let output = deleteCategory(JSON.stringify({ id: item.id }));
     output.then((res) => {
-      console.log(res);
-      if (
-        res.err !== null &&
-        res.err === "SequelizeForeignKeyConstraintError"
-      ) {
-        message.error("لا يمكن حذف صنف و يوجد مواد مصنفه به");
-      } else if (res.deleted !== null) {
-        message.success("تم الحذف");
-        setLoadCategories(true);
+      if (res === resources.FAILED_TO_FETCH) {
+        ErrorInFetch(() => onDeletingCategoryHandler(item));
       } else {
-        message.error("حدث خطأ بعملية الحذف");
+        if (
+          res.err !== null &&
+          res.err === "SequelizeForeignKeyConstraintError"
+        ) {
+          message.error("لا يمكن حذف صنف و يوجد مواد مصنفه به");
+        } else if (res.deleted !== null) {
+          message.success("تم الحذف");
+          setLoadCategories(true);
+        } else {
+          message.error("حدث خطأ بعملية الحذف");
+        }
       }
     });
   }

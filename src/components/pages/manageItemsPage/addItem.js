@@ -7,70 +7,69 @@ import {
   List,
   Carousel,
   Descriptions,
+  Popconfirm,
+  Tooltip,
+  message,
 } from "antd";
+import { DeleteTwoTone, EditTwoTone } from "@ant-design/icons";
 import back_direction from "../../../images/back_direction.png";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import AddItemType from "./addItemType";
 import { getBrands } from "../../../api/brands";
 import { getCategories } from "../../../api/categories";
+import { addNewItem } from "../../../api/items";
+import { ManagerAccountInfo } from "../../../store/managerAccountInfo";
+import ManageItemType from "./manageItemType";
+import { resources } from "../../../resource";
+import ErrorInFetch from "../../layout/errorInFetch";
 
+let selectedItemTypeKey;
 function AddItem(props) {
+  const { accountInfo } = ManagerAccountInfo();
   const [displayAddTypeModel, setDisplayAddTypeModel] = useState(false);
   const [itemTypes, setItemTypes] = useState([]);
   const [brands, setBrands] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [loadComponent, setLoadComponent] = useState(false);
   const [treeData, setTreeData] = useState([]);
-  const [selectedCatValue, setSelectedCatValue] = useState("");
-
-  // const IconText = ({ icon, text }) => (
-  //   <Space>
-  //     {icon}
-  //     {text}
-  //   </Space>
-  // );
-
-const validateMessages = {
-  required: "${label} is required!",
-  types: {
-    email: "${label} is not a valid email!",
-    number: "${label} is not a valid number!",
-  },
-  number: {
-    range: "${label} must be between ${min} and ${max}",
-  },
-};
+  const [displayManageItemType, setDisplayManageItemType] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
       let brandsOutput = await getBrands();
       let categoriesOutput = await getCategories();
 
-      setBrands(brandsOutput);
-
-      let level1CatTree = [];
-      let keyCount = 0;
-      if (categoriesOutput.length > 0) {
-        categoriesOutput.forEach((element) => {
-          if (element.catLevel === 1) {
-            const branch = {
-              key: keyCount.toString(),
-              id: element.id,
-              title: element.catName,
-              level: element.catLevel,
-              parentId: null,
-              isLeaf: false,
-            };
-            level1CatTree.push(branch);
-            keyCount++;
-          }
-        });
+      if (brandsOutput === resources.FAILED_TO_FETCH) {
+        ErrorInFetch(() => fetchData());
+      } else {
+        brandsOutput.push({ id: "", brandName: "" });
+        setBrands(brandsOutput);
       }
-      setCategories(categoriesOutput);
-      setTreeData(level1CatTree);
+
+      if (categoriesOutput === resources.FAILED_TO_FETCH) {
+        ErrorInFetch(() => fetchData());
+      } else {
+        let level1CatTree = [];
+        if (categoriesOutput.length > 0) {
+          categoriesOutput.forEach((element) => {
+            if (element.catLevel === 1) {
+              const branch = {
+                key: element.id,
+                id: element.id,
+                title: element.catName,
+                level: element.catLevel,
+                parentId: null,
+                isLeaf: false,
+              };
+              level1CatTree.push(branch);
+            }
+          });
+        }
+        setCategories(categoriesOutput);
+        setTreeData(level1CatTree);
+      }
     }
     fetchData();
-  }, [loadComponent]);
+  }, []);
 
   function onAddTypeClickedHandler() {
     setDisplayAddTypeModel(!displayAddTypeModel);
@@ -84,14 +83,10 @@ const validateMessages = {
       }
 
       let loadedLvlCatTree = [];
-      let keyCount = 0;
       categories.forEach((element) => {
-        if (
-          element.catLevel === node.level + 1 &&
-          element.parentCatId === node.id
-        ) {
+        if (element.parentCatId === node.id) {
           const branch = {
-            key: `${node.key}-${keyCount.toString()}`,
+            key: element.id,
             id: element.id,
             title: element.catName,
             level: element.catLevel,
@@ -99,7 +94,6 @@ const validateMessages = {
             isLeaf: false,
           };
           loadedLvlCatTree.push(branch);
-          keyCount++;
         }
       });
       setTimeout(() => {
@@ -126,10 +120,55 @@ const validateMessages = {
     });
   }
 
-  function onFinish(event) {
+  async function onFinish(event) {
+    let formData = new FormData();
 
-    console.log(event);
-    props.onAddItemHandler();
+    itemTypes.forEach((element) => {
+      element.ItemTypeImages.forEach((oneImage) => {
+        formData.append(
+          "itemImages",
+          oneImage.data,
+          element.typeName + oneImage.key
+        );
+      });
+    });
+    formData.append("itemTypes", JSON.stringify(itemTypes));
+    formData.append("itemCode", event.user.itemCode);
+    formData.append("itemName", event.user.itemName);
+    formData.append("brandId", event.user.brand);
+    formData.append("categoryId", event.user.category);
+    formData.append("shopId", accountInfo.shopId);
+    let output = addNewItem(formData);
+    output.then((res) => {
+      const key = "updatable";
+      message.loading({ content: "جاري الاضافة", key });
+      if (res === resources.FAILED_TO_FETCH) {
+        ErrorInFetch(() => onFinish(event));
+      } else {
+        if (res.err === undefined) {
+          props.onAddItemHandler();
+          props.setLoadItems(true);
+
+          setTimeout(() => {
+            message.success({
+              content: "تم اضافة المادة بنجاح",
+              key,
+              duration: 1,
+            });
+          }, 1000);
+        } else {
+          message.error("حدث خطأ في عملية الاضافة");
+        }
+      }
+    });
+  }
+
+  function deleteItemTypeHandler(item) {
+    setItemTypes(itemTypes.filter((element) => element.key !== item.key));
+  }
+
+  function editItemTypeHandler() {
+    setDisplayManageItemType(!displayManageItemType);
   }
 
   return (
@@ -142,16 +181,17 @@ const validateMessages = {
         style={{ overflowY: "scroll" }}
       >
         <div className="flex justify-end mb-2">
-          <img
-            src={back_direction}
-            alt="back_direction"
-            style={{ width: "35px", cursor: "pointer" }}
-            className="bg-slate-400 hover:bg-slate-100 p-0.5 rounded-sm pl-2 pr-2"
-            onClick={props.onAddItemHandler}
-          ></img>
+          <Tooltip placement="right" title={"رجوع"}>
+            <img
+              src={back_direction}
+              alt="back_direction"
+              style={{ width: "35px", cursor: "pointer" }}
+              className="bg-slate-400 hover:bg-slate-100 p-0.5 rounded-sm pl-2 pr-2"
+              onClick={props.onAddItemHandler}
+            ></img>
+          </Tooltip>
         </div>
         <Form
-          validateMessages={validateMessages}
           labelCol={{
             span: 4,
           }}
@@ -164,14 +204,14 @@ const validateMessages = {
         >
           <Form.Item
             name={["user", "itemCode"]}
-            rules={[{ required: true }]}
+            rules={[{ required: true, message: "املأ الحقل رجاءا" }]}
             label={<label style={{ color: "white" }}>رمز المادة</label>}
           >
             <Input />
           </Form.Item>
           <Form.Item
             name={["user", "itemName"]}
-            rules={[{ required: true }]}
+            rules={[{ required: true, message: "املأ الحقل رجاءا" }]}
             label={<label style={{ color: "white" }}>اسم المادة</label>}
           >
             <Input />
@@ -182,7 +222,7 @@ const validateMessages = {
           >
             <Select>
               {brands.map((item) => (
-                <Select.Option key={item.id} value={item.brandName}>
+                <Select.Option key={item.id} value={item.id}>
                   {item.brandName}
                 </Select.Option>
               ))}
@@ -191,28 +231,32 @@ const validateMessages = {
           <Form.Item
             name={["user", "category"]}
             label={<label style={{ color: "white" }}>صنف المادة</label>}
+            rules={[{ required: true, message: "اختر الصنف رجاءا" }]}
           >
             <TreeSelect
               treeDataSimpleMode
               style={{ width: "100%" }}
-              value={selectedCatValue}
               dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
-              placeholder="Please select"
-              onChange={(value) => setSelectedCatValue(value)}
+              placeholder="اختر الصنف رجاءا"
               loadData={onLoadData}
               treeData={treeData}
             />
           </Form.Item>
-          {/* <Form.Item label="Switch" valuePropName="checked"> */}
-          {/* <Switch />         */}
-          {/* </Form.Item> */}
           <label style={{ color: "white", marginBotto: "5px" }}>
             انواع المادة
           </label>
           <Form.Item
             name={["user", "itemType"]}
-            // rules={[{ required: true }]}
-          // label={<label style={{ color: "white" }}>انواع المادة</label>}
+            rules={[
+              {
+                validator: (_, value) =>
+                  itemTypes.length > 0
+                    ? Promise.resolve()
+                    : Promise.reject(
+                        new Error("ادخل على الاقل نوع واحد للمادة")
+                      ),
+              },
+            ]}
           >
             <List
               itemLayout="vertical"
@@ -234,29 +278,33 @@ const validateMessages = {
               renderItem={(item) => (
                 <List.Item
                   key={item.key}
-                  // actions={[
-                  //   <IconText
-                  //     icon={<StarOutlined />}
-                  //     text="156"
-                  //     key="list-vertical-star-o"
-                  //   />,
-                  //   <IconText
-                  //     icon={<LikeOutlined />}
-                  //     text="156"
-                  //     key="list-vertical-like-o"
-                  //   />,
-                  //   <IconText
-                  //     icon={<MessageOutlined />}
-                  //     text="2"
-                  //     key="list-vertical-message"
-                  //   />,
-                  // ]}
+                  actions={[
+                    <Tooltip title="حذف النوع">
+                      <Popconfirm
+                        title="هل انت متاكد من الحذف؟"
+                        onConfirm={() => deleteItemTypeHandler(item)}
+                        okText="نعم"
+                        cancelText="كلا"
+                      >
+                        <DeleteTwoTone />
+                      </Popconfirm>
+                    </Tooltip>,
+                    <Tooltip title="تعديل النوع">
+                      <EditTwoTone
+                        onClick={() => {
+                          selectedItemTypeKey = item.key;
+                          editItemTypeHandler();
+                        }}
+                      />
+                    </Tooltip>,
+                  ]}
                   extra={
                     <div className="flex justify-end mb-2 mt-10">
                       <Carousel autoplay className="w-36 mr-3">
-                        {item.logo !== undefined
-                          ? item.logo.map((element) => (
+                        {item.ItemTypeImages !== undefined
+                          ? item.ItemTypeImages.map((element) => (
                               <img
+                                key={element.key}
                                 width={272}
                                 alt="logo"
                                 src={element.preview}
@@ -317,7 +365,9 @@ const validateMessages = {
                       label="ت نفاذ الصلاحية"
                       contentStyle={{ color: "white" }}
                     >
-                      {item.expDate !== undefined ? item.expDate.format("MMMM Do YYYY") : null}
+                      {item.expDate !== undefined && item.expDate !== null
+                        ? item.expDate.format("MMMM Do YYYY")
+                        : null}
                     </Descriptions.Item>
                     <Descriptions.Item
                       label="تفاصيل اخرى"
@@ -341,6 +391,13 @@ const validateMessages = {
         <AddItemType
           onAddTypeClickedHandler={onAddTypeClickedHandler}
           setItemTypes={setItemTypes}
+          itemTypes={itemTypes}
+        />
+      ) : null}
+      {displayManageItemType ? (
+        <ManageItemType
+          onItemTypeClickedHandler={editItemTypeHandler}
+          selectedItemTypeKey={selectedItemTypeKey}
           itemTypes={itemTypes}
         />
       ) : null}

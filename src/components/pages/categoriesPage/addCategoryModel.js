@@ -1,5 +1,7 @@
 import { Form, Input, message, Modal } from "antd";
 import { addNewCategory } from "../../../api/categories";
+import { resources } from "../../../resource";
+import ErrorInFetch from "../../layout/errorInFetch";
 
 function AddCategoryModel(props) {
   const [form] = Form.useForm();
@@ -23,9 +25,12 @@ function AddCategoryModel(props) {
       };
       let output = addNewCategory(JSON.stringify(myReqBody));
       output.then((res) => {
-        console.log(res);
-        if (res.id !== null) {
-          props.setLoadCategories(true);
+        if (res === resources.FAILED_TO_FETCH) {
+          ErrorInFetch(() => handleOk(e));
+        } else {
+          if (res.id !== null) {
+            props.setLoadCategories(true);
+          }
         }
       });
     }

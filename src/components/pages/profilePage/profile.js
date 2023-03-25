@@ -14,6 +14,10 @@ import { ManagerAccountInfo } from "../../../store/managerAccountInfo";
 import { DeleteTwoTone, ExclamationCircleOutlined } from "@ant-design/icons";
 import { deleteManagerUser } from "../../../api/managers";
 import AddManagerUser from "../manageShopsPage/addManagerUser";
+import { shopImgUrl } from "../../../api/baseUrl";
+import ErrorInFetch from "../../layout/errorInFetch";
+import { resources } from "../../../resource";
+import { MainMenuSelection } from "../../../store/mainMenuSelection";
 
 const { confirm } = Modal;
 
@@ -22,6 +26,16 @@ function Profile() {
   const [data, setdata] = useState("");
   const [loadingData, setLoadingData] = useState(true);
   const [showAddNewManager, setShowAddNewManager] = useState(false);
+  const { setSelectedItemInfo } = MainMenuSelection();
+
+  //useEffect for setting selected main menu item
+  useEffect(() => {
+    setSelectedItemInfo({
+      key: resources.MAIN_MENU_ITEMS.PROFILE.KEY,
+      title: resources.MAIN_MENU_ITEMS.PROFILE.TITLE,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const usersTblFooter = () => (
     <Button
@@ -40,8 +54,7 @@ function Profile() {
   }
 
   function showDeleteManagerConfirm(record) {
-    if(data.Managers.length > 1){
-
+    if (data.Managers.length > 1) {
       confirm({
         title: "هل انت متاكد من حذف هذا الحساب",
         icon: <ExclamationCircleOutlined />,
@@ -51,34 +64,50 @@ function Profile() {
         cancelText: "كلا",
         onOk() {
           const myReqBody = { username: record.username };
-          const key = "updatable";
-          message.loading({ content: "جاري الحذف", key });
-          let output = deleteManagerUser(JSON.stringify(myReqBody));
-          output.then((res) => {
-            if (res.deleted !== undefined) {
-              setLoadingData(true);
-              setTimeout(() => {
-                message.success({ content: "تم الحذف", key, duration: 1 });
-              }, 1000);
-            } else {
-              message.error("حدث خطأ في عملية الحذف");
-            }
-          });
+          onDeleteManagerClickHandler(myReqBody);
         },
         onCancel() {
           console.log("Cancel");
         },
       });
+    } else {
+      message.error("يجب ان يبقى حساب واحد على الاقل");
     }
-    else{
-      message.error("يجب ان يبقى حساب واحد على الاقل")
-    }
+  }
+
+  function onDeleteManagerClickHandler(myReqBody) {
+    const key = "updatable";
+    message.loading({ content: "جاري الحذف", key });
+    let output = deleteManagerUser(JSON.stringify(myReqBody));
+    output.then((res) => {
+      if (res === resources.FAILED_TO_FETCH) {
+        ErrorInFetch(() => onDeleteManagerClickHandler(myReqBody));
+      } else {
+        if (res.deleted !== undefined) {
+          setLoadingData(true);
+          setTimeout(() => {
+            message.success({ content: "تم الحذف", key, duration: 1 });
+          }, 1000);
+        } else {
+          message.error("حدث خطأ في عملية الحذف");
+        }
+      }
+    });
   }
 
   const columns = [
     { title: "اسم المستخدم", dataIndex: "username", key: "username" },
     { title: "الرمز السري", dataIndex: "password", key: "password" },
-    { title: "تاريخ التسجيل", dataIndex: "createdAt", key: "createdAt" },
+    {
+      title: "تاريخ التسجيل",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      render: (text, record) => {
+        let dateNum = Date.parse(text);
+        let myDate = new Date(dateNum);
+        return <div>{myDate.toDateString()}</div>;
+      },
+    },
     {
       title: "العمليات",
       dataIndex: "operation",
@@ -97,37 +126,36 @@ function Profile() {
     };
     let output = getOneShopDetails(JSON.stringify(myReqBody));
     output.then((res) => {
-      let dateNum = Date.parse(res[0].createdAt);
-      let myDate = new Date(dateNum);
-      res[0].createdAt = myDate.toDateString();
-      res[0].Managers.forEach(element => {
-        element = {
-          key : element.id,
-          ...element
-        }
-      });
-      setdata(res[0]);
-      setLoadingData(false);
+      if (res === resources.FAILED_TO_FETCH) {
+        ErrorInFetch(() => setLoadingData(!loadingData));
+      } else {
+        let dateNum = Date.parse(res[0].createdAt);
+        let myDate = new Date(dateNum);
+        res[0].createdAt = myDate.toDateString();
+        let newManngersArr = [];
+        res[0].Managers.forEach((element) => {
+          let newElement = {
+            key: element.id,
+            ...element,
+          };
+          newManngersArr.push(newElement);
+        });
+        res[0].Managers = newManngersArr;
+        setdata(res[0]);
+        setLoadingData(false);
+      }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadingData]);
 
   return (
-    <Space direction="vertical">
+    <Space direction="vertical" className="pb-3">
       <Badge.Ribbon text="معلومات المحل" color="red">
-        <Descriptions
-          className="bg-gray-200"
-          bordered
-          title="/"
-          size="default"
-          extra={
-            <Button type="primary" ghost="true" className="mt-2 ml-2">
-              تعديل
-            </Button>
-          }
-        >
+        <Descriptions className="bg-gray-200" bordered title="/" size="default">
           <Descriptions.Item label="الاسم">{data.name}</Descriptions.Item>
           <Descriptions.Item label="التخصص">{data.specialty}</Descriptions.Item>
           <Descriptions.Item label="الموقع">{data.location}</Descriptions.Item>
+          <Descriptions.Item label="رقم الهاتف">{data.mobile}</Descriptions.Item>
           <Descriptions.Item label="تاريخ التسجيل">
             {data.createdAt}
           </Descriptions.Item>
@@ -138,11 +166,7 @@ function Profile() {
           <Descriptions.Item label="صورة المحل">
             <Image
               width={200}
-              src={
-                data !== ""
-                  ? `data:image/${data.logo.imageExt};base64,${data.logo.image}`
-                  : null
-              }
+              src={data !== "" ? `${shopImgUrl}${data.logo}` : null}
             />
           </Descriptions.Item>
         </Descriptions>
